@@ -4,13 +4,15 @@
 
 package frc.robot;
 
-import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.Autos;
-import frc.robot.commands.ExampleCommand;
-import frc.robot.subsystems.ExampleSubsystem;
+import com.pathplanner.lib.auto.AutoBuilder;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.robot.Constants.OperatorConstants;
+import frc.robot.subsystems.swervedrive.SwerveDriveSubsystem;
+import yams.mechanisms.swerve.utility.SwerveInputStream;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -19,15 +21,31 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  * subsystems, commands, and trigger mappings) should be declared here.
  */
 public class RobotContainer {
-  // The robot's subsystems and commands are defined here...
-  private final ExampleSubsystem m_exampleSubsystem = new ExampleSubsystem();
-
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final CommandXboxController m_driverController =
       new CommandXboxController(OperatorConstants.kDriverControllerPort);
 
+  // The robot's subsystems and commands are defined here...
+  private final SwerveDriveSubsystem m_swerve = new SwerveDriveSubsystem();
+
+  // Controller axes are negated because pushing a stick forward or left reads negative.
+  private final SwerveInputStream m_driveStream =
+      m_swerve
+          .createInputStream(
+              () -> -m_driverController.getLeftY(),
+              () -> -m_driverController.getLeftX(),
+              () -> -m_driverController.getRightX())
+          .withDeadband(OperatorConstants.kDriveDeadband)
+          .withAllianceRelativeControl();
+
+  // Lists every auto in deploy/pathplanner/autos.
+  private final SendableChooser<Command> m_autoChooser;
+
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
+    m_autoChooser = AutoBuilder.buildAutoChooser();
+    SmartDashboard.putData("Auto Chooser", m_autoChooser);
+
     // Configure the trigger bindings
     configureBindings();
   }
@@ -42,13 +60,14 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    // Schedule `ExampleCommand` when `exampleCondition` changes to `true`
-    new Trigger(m_exampleSubsystem::exampleCondition)
-        .onTrue(new ExampleCommand(m_exampleSubsystem));
+    // Left stick translates, right stick X rotates.
+    m_swerve.setDefaultCommand(m_swerve.driveFieldOriented(m_driveStream));
 
-    // Schedule `exampleMethodCommand` when the Xbox controller's B button is pressed,
-    // cancelling on release.
-    m_driverController.b().whileTrue(m_exampleSubsystem.exampleMethodCommand());
+    // Start re-zeroes field-oriented forward to wherever the robot is facing.
+    m_driverController.start().onTrue(m_swerve.zeroGyro());
+
+    // Hold X to lock the wheels in an X and resist pushing.
+    m_driverController.x().whileTrue(m_swerve.lock());
   }
 
   /**
@@ -57,7 +76,6 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // An example command will be run in autonomous
-    return Autos.exampleAuto(m_exampleSubsystem);
+    return m_autoChooser.getSelected();
   }
 }

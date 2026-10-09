@@ -1,0 +1,12 @@
+{
+  "$schema": "https://config.yagsl.com/schemas/physicalproperties.json",
+  "gearing": {
+    "drive": {
+      "gearRatio": 4.71,
+      "diameter": 3
+    },
+    "angle": {
+      "gearRatio": 46.42
+    }
+  }
+}

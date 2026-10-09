@@ -1,0 +1,29 @@
+{
+  "$schema": "https://config.yagsl.com/schemas/module.json",
+  "drive": {
+    "type": "talonfx_krakenx60",
+    "id": 2,
+    "canbus": ""
+  },
+  "angle": {
+    "type": "sparkmax_neo550",
+    "id": 3,
+    "canbus": ""
+  },
+  "inverted": {
+    "drive": false,
+    "angle": false
+  },
+  "absoluteEncoder": {
+    "type": "revthroughbore_attached",
+    "id": 0,
+    "channel": 0,
+    "canbus": ""
+  },
+  "absoluteEncoderOffset": -90,
+  "absoluteEncoderInverted": true,
+  "location": {
+    "front": 10,
+    "left": 10
+  }
+}
