@@ -12,12 +12,16 @@ import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.numbers.N1;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveConstants;
@@ -202,9 +206,21 @@ public class SwerveDriveSubsystem extends SubsystemBase {
    *
    * @param visionPose Field-relative, blue-origin pose from vision.
    * @param timestampSeconds When the measurement was taken, in FPGA time.
+   * @param stdDevs How much to trust it: standard deviations of x (m), y (m) and heading (rad).
    */
-  public void addVisionMeasurement(Pose2d visionPose, double timestampSeconds) {
-    m_drive.addVisionMeasurement(visionPose, timestampSeconds);
+  public void addVisionMeasurement(
+      Pose2d visionPose, double timestampSeconds, Matrix<N3, N1> stdDevs) {
+    m_drive.addVisionMeasurement(visionPose, timestampSeconds, stdDevs);
+  }
+
+  /** The field widget the drivetrain publishes, so other code can draw poses on it. */
+  public Field2d getField2d() {
+    return m_drive.getField2d();
+  }
+
+  /** In simulation, the robot's true position (not the estimate). */
+  public Pose2d getSimPose() {
+    return m_drive.getSimPose();
   }
 
   @Override

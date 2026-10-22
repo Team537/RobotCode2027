@@ -13,6 +13,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.swervedrive.SwerveDriveSubsystem;
+import frc.robot.subsystems.vision.Vision;
 import yams.mechanisms.swerve.utility.SwerveInputStream;
 
 /**
@@ -28,6 +29,10 @@ public class RobotContainer {
 
   // The robot's subsystems and commands are defined here...
   private final SwerveDriveSubsystem m_swerve = new SwerveDriveSubsystem();
+
+  // Feeds AprilTag poses into the drivetrain's pose estimator. Runs on its own in periodic().
+  @SuppressWarnings("unused")
+  private final Vision m_vision = new Vision(m_swerve);
 
   // Controller axes are negated because pushing a stick forward or left reads negative.
   private final SwerveInputStream m_driveStream =

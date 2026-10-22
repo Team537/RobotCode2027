@@ -4,6 +4,12 @@
 
 package frc.robot;
 
+import edu.wpi.first.apriltag.AprilTagFields;
+import edu.wpi.first.math.geometry.Rotation3d;
+import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.util.Units;
+
 /**
  * The Constants class provides a convenient place for teams to hold robot-wide numerical or boolean
  * constants. This class should not be used for any other purpose. All constants should be declared
@@ -58,5 +64,45 @@ public final class Constants {
      * kMaxLinearDecel takes about 1.1 s.
      */
     public static final double kLockBrakeTimeoutSeconds = 1.5;
+  }
+
+  public static class VisionConstants {
+    /**
+     * AprilTag layout. Must match the layout selected in PhotonVision's settings, and the event's
+     * field (Welded or AndyMark). A mismatch is the most common vision failure.
+     */
+    public static final AprilTagFields kFieldLayout = AprilTagFields.k2026RebuiltWelded;
+
+    // Camera names must match the names set in the PhotonVision web UI.
+    public static final String kFrontLeftName = "front-left";
+    public static final String kFrontRightName = "front-right";
+
+    // Robot center (on the floor) to camera. +x forward, +y left, +z up. Negative pitch tilts the
+    // camera up; positive yaw turns it left. PLACEHOLDERS: measure on the robot.
+    public static final Transform3d kRobotToFrontLeft =
+        new Transform3d(
+            new Translation3d(
+                Units.inchesToMeters(8), Units.inchesToMeters(8), Units.inchesToMeters(8)),
+            new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(20)));
+    public static final Transform3d kRobotToFrontRight =
+        new Transform3d(
+            new Translation3d(
+                Units.inchesToMeters(8), Units.inchesToMeters(-8), Units.inchesToMeters(8)),
+            new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(-20)));
+
+    // How much to trust a vision pose: standard deviations of x (m), y (m) and heading (rad).
+    // Larger = trust less. Scaled up with distance to the tags. Tune from measured noise.
+    public static final double[] kSingleTagStdDevs = {4, 4, 8};
+    public static final double[] kMultiTagStdDevs = {0.5, 0.5, 1};
+
+    // Rejection filters.
+    /** Single-tag poses beyond this distance are too noisy to use. */
+    public static final double kMaxSingleTagDistanceMeters = 4.0;
+    /** PhotonVision's guidance: single-tag ambiguity above 0.2 is likely a flipped solution. */
+    public static final double kMaxSingleTagAmbiguity = 0.2;
+    /** Poses this far outside the field edge are rejected. */
+    public static final double kFieldBorderMarginMeters = 0.5;
+    /** Poses this far above or below the floor are rejected. */
+    public static final double kMaxHeightErrorMeters = 0.3;
   }
 }
