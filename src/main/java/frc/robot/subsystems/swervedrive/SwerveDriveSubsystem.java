@@ -15,14 +15,19 @@ import com.pathplanner.lib.controllers.PPHolonomicDriveController;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveConstants;
+import frc.robot.util.ChassisAccelLimiter;
+import frc.robot.util.HeadingHold;
 import java.io.File;
 import java.io.IOException;
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
 import org.json.simple.parser.ParseException;
 import swervelib.parser.SwerveParser;
 import yams.mechanisms.config.SwerveDriveConfig;
@@ -37,6 +42,7 @@ import yams.telemetry.SwerveDriveTelemetryConfig;
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
   private final SwerveDrive m_drive;
+  private final HeadingHold m_headingHold = new HeadingHold(() -> getPose().getRotation());
 
   /** Creates the drivetrain from the YAGSL config in deploy/swerve/base. */
   public SwerveDriveSubsystem() {
@@ -99,13 +105,38 @@ public class SwerveDriveSubsystem extends SubsystemBase {
   }
 
   /**
-   * Drives field-relative using the speeds from an input stream.
+   * Drives field-relative from driver input, with acceleration limiting and heading hold. Use this
+   * as the default command.
    *
-   * @param stream Input stream from {@link #createInputStream}.
+   * <p>Acceleration is limited first, then heading hold replaces rotation when the driver isn't
+   * turning, so the hold's corrections aren't slowed by the limiter. Commands that control rotation
+   * themselves (lock, auto-align) must require this subsystem so they interrupt this one.
+   *
+   * @param speeds Field-relative speeds, e.g. from {@link #createInputStream}.
+   * @param fragile While true, use the gentler fragile-piece acceleration limit.
    * @return Command that drives until interrupted.
    */
-  public Command driveFieldOriented(SwerveInputStream stream) {
-    return run(() -> m_drive.setFieldRelativeChassisSpeeds(stream.get())).withName("Drive");
+  public Command driveFieldOriented(Supplier<ChassisSpeeds> speeds, BooleanSupplier fragile) {
+    ChassisAccelLimiter limiter =
+        new ChassisAccelLimiter(
+            () ->
+                fragile.getAsBoolean()
+                    ? DriveConstants.kFragileLinearAccel
+                    : DriveConstants.kMaxLinearAccel,
+            () -> DriveConstants.kMaxLinearDecel,
+            () -> DriveConstants.kMaxAngularAccel);
+
+    return runOnce(
+            () -> {
+              limiter.reset(m_drive.getFieldRelativeSpeed());
+              m_headingHold.reset();
+            })
+        .andThen(
+            run(
+                () ->
+                    m_drive.setFieldRelativeChassisSpeeds(
+                        m_headingHold.calculate(limiter.calculate(speeds.get())))))
+        .withName("Drive");
   }
 
   /**

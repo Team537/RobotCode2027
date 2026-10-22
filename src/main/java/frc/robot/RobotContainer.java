@@ -5,6 +5,7 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -36,7 +37,19 @@ public class RobotContainer {
               () -> -m_driverController.getLeftX(),
               () -> -m_driverController.getRightX())
           .withDeadband(OperatorConstants.kDriveDeadband)
+          // Cubing makes the first half of stick travel gentle while keeping full speed at full
+          // stick. Speed scaling is done in driverSpeeds(), not with the stream's scale methods,
+          // because YAMS scales *before* cubing (a 0.3 scale would become 0.3³ ≈ 3%).
+          .withCubeTranslationControllerAxis()
+          .withCubeRotationControllerAxis()
           .withAllianceRelativeControl();
+
+  // Hold left bumper for slow, precise driving.
+  private final Trigger m_precisionMode = m_driverController.leftBumper();
+
+  // Hold right bumper for gentler acceleration, e.g. while carrying a fragile game piece. Replace
+  // with a game-piece sensor or superstructure state once one exists.
+  private final Trigger m_fragileMode = m_driverController.rightBumper();
 
   // Lists every auto in deploy/pathplanner/autos.
   private final SendableChooser<Command> m_autoChooser;
@@ -61,13 +74,26 @@ public class RobotContainer {
    */
   private void configureBindings() {
     // Left stick translates, right stick X rotates.
-    m_swerve.setDefaultCommand(m_swerve.driveFieldOriented(m_driveStream));
+    m_swerve.setDefaultCommand(m_swerve.driveFieldOriented(this::driverSpeeds, m_fragileMode));
 
     // Start re-zeroes field-oriented forward to wherever the robot is facing.
     m_driverController.start().onTrue(m_swerve.zeroGyro());
 
     // Hold X to lock the wheels in an X and resist pushing.
     m_driverController.x().whileTrue(m_swerve.lock());
+  }
+
+  /** Driver stick speeds, scaled down for normal rotation and for precision mode. */
+  private ChassisSpeeds driverSpeeds() {
+    ChassisSpeeds speeds = m_driveStream.get();
+    boolean precise = m_precisionMode.getAsBoolean();
+    double translationScale = precise ? OperatorConstants.kPrecisionTranslationScale : 1.0;
+    double rotationScale =
+        precise ? OperatorConstants.kPrecisionRotationScale : OperatorConstants.kRotationScale;
+    return new ChassisSpeeds(
+        speeds.vxMetersPerSecond * translationScale,
+        speeds.vyMetersPerSecond * translationScale,
+        speeds.omegaRadiansPerSecond * rotationScale);
   }
 
   /**

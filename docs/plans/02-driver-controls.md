@@ -41,6 +41,8 @@ public static final double kPrecisionRotationScale = 0.4;
 
 Cubing keeps full speed at full stick while making the first half of travel gentle. 6328 squares instead; try both, keep what the driver prefers.
 
+> **Correction (found while implementing):** YAMS applies `withScaleTranslation` / `withScaleRotation` *before* cubing, so with cubing on, a 0.3 scale gives 0.3³ ≈ 3% at full stick and 0.6 gives ≈ 22%. The implementation drops the stream's scale methods and multiplies the stream's output instead (`RobotContainer.driverSpeeds()`), which gives exactly the configured fraction at full stick. The clone-based Step 2 below was not used.
+
 ## Step 2 — Precision mode (30 minutes)
 
 The YAMS scale methods take fixed doubles, so build a second stream by cloning and pick between them with a supplier.
