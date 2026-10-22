@@ -4,6 +4,10 @@
 
 package frc.robot.subsystems.swervedrive;
 
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
+
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
@@ -15,6 +19,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.Constants.DriveConstants;
 import java.io.File;
 import java.io.IOException;
 import java.util.function.DoubleSupplier;
@@ -41,6 +46,12 @@ public class SwerveDriveSubsystem extends SubsystemBase {
             .withStartingPose(new Pose2d(3, 3, Rotation2d.kZero))
             .withTranslationController(new PIDController(4, 0, 0))
             .withRotationController(new PIDController(1, 0, 0))
+            .withMaximumModuleSpeed(MetersPerSecond.of(DriveConstants.kMaxModuleSpeedMps))
+            .withMaximumChassisSpeed(
+                MetersPerSecond.of(DriveConstants.kMaxChassisSpeedMps),
+                DegreesPerSecond.of(DriveConstants.kMaxAngularSpeedDps))
+            // Stops the sideways drift when translating and rotating at the same time.
+            .withDiscretizationTime(Seconds.of(0.02))
             .withTelemetry("swerve", new SwerveDriveTelemetryConfig(TelemetryVerbosity.HIGH));
 
     SwerveParser.parse(new File(Filesystem.getDeployDirectory(), "swerve/base"));

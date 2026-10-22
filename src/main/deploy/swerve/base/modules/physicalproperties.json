@@ -8,5 +8,9 @@
     "angle": {
       "gearRatio": 46.42
     }
+  },
+  "statorCurrentLimit": {
+    "drive": 40,
+    "angle": 20
   }
 }

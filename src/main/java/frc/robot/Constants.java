@@ -18,4 +18,17 @@ public final class Constants {
     // Stick values smaller than this are treated as zero so the robot doesn't creep.
     public static final double kDriveDeadband = 0.05;
   }
+
+  public static class DriveConstants {
+    /** Kraken X60 free speed (6000 rpm, no FOC) through 4.71:1 onto a 3 in wheel. */
+    public static final double kMaxModuleSpeedMps = 5.08;
+
+    /**
+     * Top speed the chassis is allowed to request. 85% of free speed is a safe start; replace with
+     * the measured plateau from the max-speed test, and keep PathPlanner's maxDriveSpeed in sync.
+     */
+    public static final double kMaxChassisSpeedMps = 4.3;
+
+    public static final double kMaxAngularSpeedDps = 540.0;
+  }
 }

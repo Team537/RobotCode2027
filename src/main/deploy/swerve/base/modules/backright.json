@@ -1,7 +1,7 @@
 {
   "$schema": "https://config.yagsl.com/schemas/module.json",
   "drive": {
-    "type": "sparkmax_neo",
+    "type": "talonfx_krakenx60",
     "id": 8,
     "canbus": ""
   },
@@ -23,7 +23,7 @@
   "absoluteEncoderOffset": 90,
   "absoluteEncoderInverted": true,
   "location": {
-    "front": -10,
-    "left": -10
+    "front": -8.25,
+    "left": -8.25
   }
 }
