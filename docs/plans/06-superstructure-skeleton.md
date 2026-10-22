@@ -162,6 +162,16 @@ Use the YAMS mechanism library so you learn its config, sim and telemetry before
 
 Even if the 2027 robot has no elevator, the exercise transfers: `Arm`, `Pivot`, `Flywheel` in YAMS share the config pattern.
 
+### Step 4b — Drive limits that follow elevator height (added during Plan 2)
+
+Goal: full acceleration with the elevator down, automatically safer as it rises. Chosen over tilt-based "auto-balance", which reacts too late, fights the driver, and still depends on CG height through its tuning.
+
+1. **Measure CG height with the Pigeon** at elevator down and fully up: tip the robot by hand onto two wheels until it balances by itself, read the tilt angle θ, then `h = 8.25 in / tan(θ)` (8.25 in = half the 16.5 in wheelbase). CG height between those two points is linear in elevator extension.
+2. **Acceleration limit** = ~0.65 × g × 8.25 in / h(elevator). Feed it into `ChassisAccelLimiter`'s accel *and* decel suppliers (the decel limit must never exceed the tip limit either). The 0.65 margin covers velocity-loop overshoot.
+3. **Top speed limit** also drops with height, so the robot can still stop in a reasonable distance with the elevator up (stopping distance = v² / 2a).
+4. **Autos:** apply the same limits to PathPlanner (path constraints or a constraint zone while the elevator is up), since paths don't go through the driver limiter.
+5. Optional backstop, not the main protection: soften accel/decel when Pigeon tilt exceeds a few degrees (Plan 2 Step 5d).
+
 ## Step 5 — State observers: LEDs, dashboard, rumble (1 day)
 
 `Leds` subsystem (CANdle, or PWM addressable via WPILib `AddressableLED`) that reads `Superstructure.getState()` in `periodic()` and shows a color per state. Add vision health (Plan 3) as a stripe. No commands set LEDs; they *observe*.
@@ -181,6 +191,7 @@ If you keep the 2026 chassis as a practice bot while building the 2027 robot, se
 - [ ] `ExampleElevator` built from YAMS, moves in sim between states, visible in AdvantageScope.
 - [ ] `Leds` reflects superstructure state; Elastic shows it.
 - [ ] Plan 2's fragile-piece accel limit is driven by `Superstructure.holdingFragilePiece()`.
+- [ ] Drive accel, decel and top speed scale with elevator height from measured CG (Step 4b), in teleop and autos.
 
 ## Risks
 

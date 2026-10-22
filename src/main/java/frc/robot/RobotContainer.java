@@ -79,7 +79,8 @@ public class RobotContainer {
     // Start re-zeroes field-oriented forward to wherever the robot is facing.
     m_driverController.start().onTrue(m_swerve.zeroGyro());
 
-    // Hold X to lock the wheels in an X and resist pushing.
+    // Hold X to lock the wheels in an X and resist pushing (defense). Safe at speed: the robot
+    // brakes smoothly first and locks once nearly stopped.
     m_driverController.x().whileTrue(m_swerve.lock());
   }
 

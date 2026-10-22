@@ -149,12 +149,37 @@ public class SwerveDriveSubsystem extends SubsystemBase {
   }
 
   /**
-   * Points the wheels in an X so the robot resists being pushed.
+   * Points the wheels in an X so the robot resists being pushed. Safe to press while driving: the
+   * robot first brakes at the normal slow-down limit, and only locks once it has nearly stopped.
+   * Snapping the wheels to an X at speed would stop the robot almost instantly, scrubbing the
+   * treads, loading the modules sideways, and risking a tip.
    *
-   * @return Command that holds the wheels locked until interrupted.
+   * @return Command that brakes, then holds the wheels locked until interrupted.
    */
   public Command lock() {
-    return run(m_drive::lockPose).withName("Lock");
+    ChassisAccelLimiter brake =
+        new ChassisAccelLimiter(
+            () -> DriveConstants.kMaxLinearDecel,
+            () -> DriveConstants.kMaxLinearDecel,
+            () -> DriveConstants.kMaxAngularAccel);
+
+    Command slowDown =
+        runOnce(() -> brake.reset(m_drive.getFieldRelativeSpeed()))
+            .andThen(
+                run(() -> m_drive.setFieldRelativeChassisSpeeds(brake.calculate(new ChassisSpeeds())))
+                    .until(this::isNearlyStopped))
+            // Backstop in case the robot is being pushed and never reads "stopped".
+            .withTimeout(DriveConstants.kLockBrakeTimeoutSeconds);
+
+    return slowDown.andThen(run(m_drive::lockPose)).withName("Lock");
+  }
+
+  /** True when the robot is moving slowly enough to lock the wheels safely. */
+  private boolean isNearlyStopped() {
+    ChassisSpeeds speeds = m_drive.getRobotRelativeSpeed();
+    return Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
+            < DriveConstants.kLockMaxLinearSpeedMps
+        && Math.abs(speeds.omegaRadiansPerSecond) < DriveConstants.kLockMaxAngularSpeedRadPerSec;
   }
 
   /** Returns the robot's pose as estimated by odometry. */

@@ -49,5 +49,14 @@ public final class Constants {
     public static final double kMaxAngularAccel = 12.0;
     /** Gentler speed-up limit while carrying a fragile game piece (hold right bumper), m/s². */
     public static final double kFragileLinearAccel = 1.5;
+
+    // X-lock only engages below these speeds; above them it brakes first.
+    public static final double kLockMaxLinearSpeedMps = 0.3;
+    public static final double kLockMaxAngularSpeedRadPerSec = 0.5;
+    /**
+     * Longest the X-lock will spend braking before locking anyway. Stopping from full speed at
+     * kMaxLinearDecel takes about 1.1 s.
+     */
+    public static final double kLockBrakeTimeoutSeconds = 1.5;
   }
 }
