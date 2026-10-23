@@ -78,17 +78,23 @@ public final class Constants {
     public static final String kFrontRightName = "front-right";
 
     // Robot center (on the floor) to camera. +x forward, +y left, +z up. Negative pitch tilts the
-    // camera up; positive yaw turns it left. PLACEHOLDERS: measure on the robot.
+    // camera up; positive yaw turns it left.
+    //
+    // x/y: camera centers are 5 in from the front and 5 in from the sides of the 20 in frame,
+    // so 5 in forward and 5 in left/right of center (measured).
+    // Yaw: the cameras cross, each angled ~23 deg toward the opposite side, estimated from a
+    // top-down photo. Re-measure with a protractor.
+    // z: lens center 6 in off the floor (measured). Pitch: tilted up 20 deg.
     public static final Transform3d kRobotToFrontLeft =
         new Transform3d(
             new Translation3d(
-                Units.inchesToMeters(8), Units.inchesToMeters(8), Units.inchesToMeters(8)),
-            new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(20)));
+                Units.inchesToMeters(5), Units.inchesToMeters(5), Units.inchesToMeters(6)),
+            new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(-23)));
     public static final Transform3d kRobotToFrontRight =
         new Transform3d(
             new Translation3d(
-                Units.inchesToMeters(8), Units.inchesToMeters(-8), Units.inchesToMeters(8)),
-            new Rotation3d(0, Units.degreesToRadians(-25), Units.degreesToRadians(-20)));
+                Units.inchesToMeters(5), Units.inchesToMeters(-5), Units.inchesToMeters(6)),
+            new Rotation3d(0, Units.degreesToRadians(-20), Units.degreesToRadians(23)));
 
     // How much to trust a vision pose: standard deviations of x (m), y (m) and heading (rad).
     // Larger = trust less. Scaled up with distance to the tags. Tune from measured noise.
