@@ -31,7 +31,10 @@ deploy {
 
                 // Static files artifact
                 frcStaticFileDeploy(getArtifactTypeClass('FileTreeArtifact')) {
-                    files = project.fileTree('src/main/deploy')
+                    // Tooling junk (.claude-flow, .swarm, ruvector.db) must not go to the roboRIO.
+                    files = project.fileTree('src/main/deploy') {
+                        exclude '**/.claude-flow/**', '**/.swarm/**', '**/*.db'
+                    }
                     directory = '/home/lvuser/deploy'
                     deleteOldFiles = false // Change to true to delete files on roboRIO that no
                                            // longer exist in deploy directory of this project

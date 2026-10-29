@@ -4,17 +4,13 @@
 
 package frc.robot.subsystems.swervedrive;
 
-import static edu.wpi.first.units.Units.DegreesPerSecond;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.Seconds;
-
 import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.PIDConstants;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.controllers.PPHolonomicDriveController;
-import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
@@ -29,16 +25,16 @@ import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.json.simple.parser.ParseException;
+import swervelib.SwerveDrive;
+import swervelib.SwerveInputStream;
 import swervelib.parser.SwerveParser;
-import yams.mechanisms.config.SwerveDriveConfig;
-import yams.mechanisms.swerve.SwerveDrive;
-import yams.mechanisms.swerve.utility.SwerveInputStream;
-import yams.motorcontrollers.SmartMotorControllerConfig.TelemetryVerbosity;
-import yams.telemetry.SwerveDriveTelemetryConfig;
 
 /**
- * Swerve drivetrain. YAGSL builds the hardware from the JSON config in deploy/swerve/base, and
- * YAMS's {@link SwerveDrive} handles kinematics, odometry, simulation and telemetry.
+ * Swerve drivetrain. YAGSL builds the hardware from the JSON config in deploy/swerve/base.
+ *
+ * <p>Temporarily on YAGSL 2026.3.12 because the newer YAGSL/YAMS sends feedforward parameters that
+ * 2025 (25.x) Spark MAX firmware rejects with "Invalid parameter id". Move back to YAGSL/YAMS once
+ * the steer Spark MAXes are on 26.x firmware.
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
   private final SwerveDrive m_drive;
@@ -46,22 +42,20 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
   /** Creates the drivetrain from the YAGSL config in deploy/swerve/base. */
   public SwerveDriveSubsystem() {
-    SwerveDriveConfig config =
-        new SwerveDriveConfig()
-            .withSubsystem(this)
-            .withStartingPose(new Pose2d(3, 3, Rotation2d.kZero))
-            .withTranslationController(new PIDController(4, 0, 0))
-            .withRotationController(new PIDController(1, 0, 0))
-            .withMaximumModuleSpeed(MetersPerSecond.of(DriveConstants.kMaxModuleSpeedMps))
-            .withMaximumChassisSpeed(
-                MetersPerSecond.of(DriveConstants.kMaxChassisSpeedMps),
-                DegreesPerSecond.of(DriveConstants.kMaxAngularSpeedDps))
-            // Stops the sideways drift when translating and rotating at the same time.
-            .withDiscretizationTime(Seconds.of(0.02))
-            .withTelemetry("swerve", new SwerveDriveTelemetryConfig(TelemetryVerbosity.HIGH));
-
-    SwerveParser.parse(new File(Filesystem.getDeployDirectory(), "swerve/base"));
-    m_drive = SwerveParser.createSwerveDrive(config);
+    try {
+      m_drive =
+          new SwerveParser(new File(Filesystem.getDeployDirectory(), "swerve/base"))
+              .createSwerveDrive(DriveConstants.kMaxModuleSpeedMps, new Pose2d(3, 3, Rotation2d.kZero));
+    } catch (IOException e) {
+      throw new RuntimeException("Failed to load YAGSL swerve config", e);
+    }
+    m_drive.setMaximumAllowableSpeeds(
+        DriveConstants.kMaxChassisSpeedMps,
+        Units.degreesToRadians(DriveConstants.kMaxAngularSpeedDps));
+    // Stops the sideways drift when translating and rotating at the same time.
+    m_drive.setChassisDiscretization(true, 0.02);
+    // The accel limiter and HeadingHold own heading control, so YAGSL's own correction stays off.
+    m_drive.setHeadingCorrection(false);
 
     configurePathPlanner();
   }
@@ -78,9 +72,8 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     AutoBuilder.configure(
         m_drive::getPose,
         m_drive::resetOdometry,
-        m_drive::getRobotRelativeSpeed,
-        (speeds, feedforwards) ->
-            m_drive.setRobotRelativeChassisSpeeds(speeds, feedforwards.linearForces()),
+        m_drive::getRobotVelocity,
+        (speeds, feedforwards) -> m_drive.drive(speeds),
         new PPHolonomicDriveController(
             new PIDConstants(5.0, 0.0, 0.0), new PIDConstants(5.0, 0.0, 0.0)),
         config,
@@ -101,7 +94,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
    */
   public SwerveInputStream createInputStream(
       DoubleSupplier x, DoubleSupplier y, DoubleSupplier rotation) {
-    return new SwerveInputStream(m_drive, x, y, rotation);
+    return SwerveInputStream.of(m_drive, x, y).withControllerRotationAxis(rotation);
   }
 
   /**
@@ -128,13 +121,13 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
     return runOnce(
             () -> {
-              limiter.reset(m_drive.getFieldRelativeSpeed());
+              limiter.reset(m_drive.getFieldVelocity());
               m_headingHold.reset();
             })
         .andThen(
             run(
                 () ->
-                    m_drive.setFieldRelativeChassisSpeeds(
+                    m_drive.driveFieldOriented(
                         m_headingHold.calculate(limiter.calculate(speeds.get())))))
         .withName("Drive");
   }
@@ -164,9 +157,9 @@ public class SwerveDriveSubsystem extends SubsystemBase {
             () -> DriveConstants.kMaxAngularAccel);
 
     Command slowDown =
-        runOnce(() -> brake.reset(m_drive.getFieldRelativeSpeed()))
+        runOnce(() -> brake.reset(m_drive.getFieldVelocity()))
             .andThen(
-                run(() -> m_drive.setFieldRelativeChassisSpeeds(brake.calculate(new ChassisSpeeds())))
+                run(() -> m_drive.driveFieldOriented(brake.calculate(new ChassisSpeeds())))
                     .until(this::isNearlyStopped))
             // Backstop in case the robot is being pushed and never reads "stopped".
             .withTimeout(DriveConstants.kLockBrakeTimeoutSeconds);
@@ -176,7 +169,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
   /** True when the robot is moving slowly enough to lock the wheels safely. */
   private boolean isNearlyStopped() {
-    ChassisSpeeds speeds = m_drive.getRobotRelativeSpeed();
+    ChassisSpeeds speeds = m_drive.getRobotVelocity();
     return Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond)
             < DriveConstants.kLockMaxLinearSpeedMps
         && Math.abs(speeds.omegaRadiansPerSecond) < DriveConstants.kLockMaxAngularSpeedRadPerSec;
@@ -194,7 +187,7 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
   /** Returns the robot's heading as reported by the gyro. */
   public Rotation2d getHeading() {
-    return new Rotation2d(m_drive.getGyroAngle());
+    return m_drive.getGyro().getRotation3d().toRotation2d();
   }
 
   /**
@@ -205,15 +198,5 @@ public class SwerveDriveSubsystem extends SubsystemBase {
    */
   public void addVisionMeasurement(Pose2d visionPose, double timestampSeconds) {
     m_drive.addVisionMeasurement(visionPose, timestampSeconds);
-  }
-
-  @Override
-  public void periodic() {
-    m_drive.updateTelemetry();
-  }
-
-  @Override
-  public void simulationPeriodic() {
-    m_drive.simIterate();
   }
 }

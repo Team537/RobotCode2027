@@ -1,12 +1,10 @@
 {
-  "$schema": "https://config.yagsl.com/schemas/swervedrive.json",
-  "gyro": {
-    "type": "pigeon2_can",
+  "imu": {
+    "type": "pigeon2",
     "id": 42,
-    "canbus": ""
+    "canbus": null
   },
-  "gyroAxis": "yaw",
-  "gyroInvert": false,
+  "invertedIMU": false,
   "modules": [
     "frontleft.json",
     "frontright.json",

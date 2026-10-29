@@ -1,16 +1,23 @@
 {
-  "$schema": "https://config.yagsl.com/schemas/physicalproperties.json",
-  "gearing": {
-    "drive": {
-      "gearRatio": 4.71,
-      "diameter": 3
-    },
-    "angle": {
-      "gearRatio": 46.42
-    }
-  },
-  "statorCurrentLimit": {
+  "optimalVoltage": 12,
+  "wheelGripCoefficientOfFriction": 1.19,
+  "currentLimit": {
     "drive": 40,
     "angle": 20
+  },
+  "conversionFactors": {
+    "angle": {
+      "gearRatio": 46.42,
+      "factor": 0
+    },
+    "drive": {
+      "diameter": 3,
+      "gearRatio": 4.71,
+      "factor": 0
+    }
+  },
+  "rampRate": {
+    "drive": 0.25,
+    "angle": 0.25
   }
 }

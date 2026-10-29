@@ -13,7 +13,7 @@ import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.subsystems.swervedrive.SwerveDriveSubsystem;
-import yams.mechanisms.swerve.utility.SwerveInputStream;
+import swervelib.SwerveInputStream;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -36,13 +36,13 @@ public class RobotContainer {
               () -> -m_driverController.getLeftY(),
               () -> -m_driverController.getLeftX(),
               () -> -m_driverController.getRightX())
-          .withDeadband(OperatorConstants.kDriveDeadband)
+          .deadband(OperatorConstants.kDriveDeadband)
           // Cubing makes the first half of stick travel gentle while keeping full speed at full
           // stick. Speed scaling is done in driverSpeeds(), not with the stream's scale methods,
-          // because YAMS scales *before* cubing (a 0.3 scale would become 0.3³ ≈ 3%).
-          .withCubeTranslationControllerAxis()
-          .withCubeRotationControllerAxis()
-          .withAllianceRelativeControl();
+          // because the stream scales *before* cubing (a 0.3 scale would become 0.3³ ≈ 3%).
+          .cubeTranslationControllerAxis(true)
+          .cubeRotationControllerAxis(true)
+          .allianceRelativeControl(true);
 
   // Hold left bumper for slow, precise driving.
   private final Trigger m_precisionMode = m_driverController.leftBumper();
