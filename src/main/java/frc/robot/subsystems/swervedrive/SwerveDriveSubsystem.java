@@ -22,11 +22,17 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants.DriveConstants;
 import frc.robot.util.ChassisAccelLimiter;
 import frc.robot.util.HeadingHold;
+import frc.robot.util.ModuleZeroing;
+import frc.robot.util.SparkZeroOffsets;
+import frc.robot.util.SteerDirectionTest;
+import frc.robot.util.SwerveAutoTuner;
+import frc.robot.util.SwerveModuleTuner;
 import java.io.File;
 import java.io.IOException;
 import java.util.function.BooleanSupplier;
@@ -46,6 +52,8 @@ import yams.telemetry.SwerveDriveTelemetryConfig;
  */
 public class SwerveDriveSubsystem extends SubsystemBase {
   private final SwerveDrive m_drive;
+  private final SwerveModuleTuner m_tuner;
+  private final ModuleZeroing m_zeroing;
   private final HeadingHold m_headingHold = new HeadingHold(() -> getPose().getRotation());
 
   /** Creates the drivetrain from the YAGSL config in deploy/swerve/base. */
@@ -65,7 +73,20 @@ public class SwerveDriveSubsystem extends SubsystemBase {
             .withTelemetry("swerve", new SwerveDriveTelemetryConfig(TelemetryVerbosity.HIGH));
 
     SwerveParser.parse(new File(Filesystem.getDeployDirectory(), "swerve/base"));
+    // The REV Client zero lives in the Spark MAXes; YAGSL wipes it on boot, so save and restore it.
+    SparkZeroOffsets zeros = new SparkZeroOffsets();
     m_drive = SwerveParser.createSwerveDrive(config);
+    zeros.restore(m_drive);
+    m_tuner = new SwerveModuleTuner(m_drive);
+    m_zeroing = new ModuleZeroing(m_drive);
+
+    // Dashboard buttons. Wheels move during these: robot must be on blocks.
+    SwerveAutoTuner autoTuner = new SwerveAutoTuner(m_drive, m_tuner, this);
+    SmartDashboard.putData(
+        "Zeroing/Steer Direction Test", new SteerDirectionTest(m_drive).command(this));
+    SmartDashboard.putData("Tuning/Auto-Tune Drive", autoTuner.tuneDrive());
+    SmartDashboard.putData("Tuning/Auto-Tune Steer", autoTuner.tuneSteer());
+    SmartDashboard.putData("Tuning/Auto-Tune All", autoTuner.tuneAll());
 
     configurePathPlanner();
   }
@@ -226,6 +247,8 @@ public class SwerveDriveSubsystem extends SubsystemBase {
   @Override
   public void periodic() {
     m_drive.updateTelemetry();
+    m_tuner.periodic();
+    m_zeroing.periodic();
   }
 
   @Override
