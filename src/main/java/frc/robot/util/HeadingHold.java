@@ -4,7 +4,6 @@
 
 package frc.robot.util;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.ProfiledPIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -18,8 +17,7 @@ import java.util.function.Supplier;
  *
  * <p>After the stick is released, it waits briefly for the robot to stop turning, then locks onto
  * the heading at that moment and uses a PID loop to stay there while the driver is translating.
- * When the robot is stationary it passes the zero speeds through untouched, so the wheels keep
- * their last angle instead of twitching into an X.
+ * When the robot is stationary it passes the driver's speeds through untouched.
  */
 public class HeadingHold {
   /** Rotation requests smaller than this (rad/s) count as "stick released". */
@@ -27,13 +25,6 @@ public class HeadingHold {
 
   /** Translation requests smaller than this (m/s) count as "stationary". */
   private static final double kTranslationDeadband = 0.05;
-
-  /**
-   * Heading errors smaller than this are ignored. Any nonzero rotation command, however small,
-   * makes the kinematics point every wheel tangentially (an X), so the hold must output exactly
-   * zero when it has nothing meaningful to correct.
-   */
-  private static final double kHeadingTolerance = Math.toRadians(2.0);
 
   /** Time to let the robot stop turning before locking the heading. */
   private static final double kLatchDelaySeconds = 0.2;
@@ -88,8 +79,7 @@ public class HeadingHold {
     double heading = m_heading.get().getRadians();
     boolean translating =
         Math.hypot(desired.vxMetersPerSecond, desired.vyMetersPerSecond) > kTranslationDeadband;
-    double error = MathUtil.angleModulus(m_target.getRadians() - heading);
-    if (!translating || Math.abs(error) < kHeadingTolerance) {
+    if (!translating) {
       m_pid.reset(heading);
       return desired;
     }

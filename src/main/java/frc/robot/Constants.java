@@ -56,6 +56,9 @@ public final class Constants {
     /** Gentler speed-up limit while carrying a fragile game piece (hold right bumper), m/s². */
     public static final double kFragileLinearAccel = 1.5;
 
+    /** Module speed below which a wheel holds its current angle rather than steering, m/s. */
+    public static final double kModuleMinSpeedMps = 0.05;
+
     // X-lock only engages below these speeds; above them it brakes first.
     public static final double kLockMaxLinearSpeedMps = 0.3;
     public static final double kLockMaxAngularSpeedRadPerSec = 0.5;

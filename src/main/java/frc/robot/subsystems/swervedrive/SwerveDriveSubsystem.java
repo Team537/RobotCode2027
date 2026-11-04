@@ -6,6 +6,7 @@ package frc.robot.subsystems.swervedrive;
 
 import static edu.wpi.first.units.Units.DegreesPerSecond;
 import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -29,14 +30,19 @@ import frc.robot.util.ChassisAccelLimiter;
 import frc.robot.util.HeadingHold;
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import org.json.simple.parser.ParseException;
 import swervelib.parser.SwerveParser;
+import swervelib.parser.json.ModuleJson;
 import yams.mechanisms.config.SwerveDriveConfig;
 import yams.mechanisms.swerve.SwerveDrive;
+import yams.mechanisms.swerve.SwerveModule;
 import yams.mechanisms.swerve.utility.SwerveInputStream;
+import yams.motorcontrollers.SmartMotorController;
+import yams.motorcontrollers.SmartMotorControllerConfig;
 import yams.motorcontrollers.SmartMotorControllerConfig.TelemetryVerbosity;
 import yams.telemetry.SwerveDriveTelemetryConfig;
 
@@ -67,7 +73,40 @@ public class SwerveDriveSubsystem extends SubsystemBase {
     SwerveParser.parse(new File(Filesystem.getDeployDirectory(), "swerve/base"));
     m_drive = SwerveParser.createSwerveDrive(config);
 
+    for (SwerveModule module : m_drive.getModules()) {
+      useAbsoluteEncoderForSteering(module);
+      // Below this wheel speed a module keeps its current angle instead of steering toward the
+      // commanded one. Without it any near-zero command, e.g. a rotation stick resting slightly
+      // off center, re-aims every wheel tangentially and the drivetrain sits in an X.
+      module.getConfig().withMinimumVelocity(MetersPerSecond.of(DriveConstants.kModuleMinSpeedMps));
+    }
+
     configurePathPlanner();
+  }
+
+  /**
+   * Re-applies the steering motor config so the Spark MAX closes its loop on the attached
+   * through-bore encoder.
+   *
+   * <p>YAGSL 2026.10.03 builds the Spark MAX wrapper (which configures the controller) before it
+   * adds the through-bore to that wrapper's config, and its per-CAN-ID cache hands back the same
+   * wrapper afterwards. The controller is therefore left on its relative encoder, zeroed wherever
+   * the wheel sat at power-on, and YAMS skips seeding because the config says an external encoder
+   * is in use. Re-applying after the fact configures the absolute encoder feedback the JSON asked
+   * for.
+   */
+  private static void useAbsoluteEncoderForSteering(SwerveModule module) {
+    SmartMotorController azimuth = module.getAzimuthMotorController();
+    SmartMotorControllerConfig cfg = azimuth.getConfig();
+    if (cfg.getExternalEncoder().isEmpty()) {
+      return;
+    }
+    int index = Arrays.asList(SwerveParser.swerveDriveJson.modules).indexOf(module.getName() + ".json");
+    ModuleJson json = SwerveParser.moduleJsons[index];
+    cfg.withExternalEncoderInverted(json.absoluteEncoderInverted)
+        .withExternalEncoderDiscontinuityPoint(Rotations.of(0.5))
+        .withResetPreviousConfig(false);
+    azimuth.applyConfig(cfg);
   }
 
   /** Configures PathPlanner's {@link AutoBuilder} so autos and paths can drive this subsystem. */
