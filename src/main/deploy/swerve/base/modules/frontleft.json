@@ -6,7 +6,7 @@
     "canbus": ""
   },
   "angle": {
-    "type": "sparkmax_neo550",
+    "type": "talonfx_krakenx44",
     "id": 3,
     "canbus": ""
   },
@@ -15,15 +15,15 @@
     "angle": false
   },
   "absoluteEncoder": {
-    "type": "revthroughbore_attached",
-    "id": 0,
+    "type": "cancoder_can",
+    "id": 12,
     "channel": 0,
     "canbus": ""
   },
-  "absoluteEncoderOffset": -165,
-  "absoluteEncoderInverted": true,
+  "absoluteEncoderOffset": 0,
+  "absoluteEncoderInverted": false,
   "location": {
-    "front": 8.25,
-    "left": 8.25
+    "front": 10,
+    "left": 10
   }
 }
