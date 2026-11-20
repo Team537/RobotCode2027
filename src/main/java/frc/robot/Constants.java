@@ -41,16 +41,16 @@ public final class Constants {
      * Top speed the chassis is allowed to request. 85% of free speed is a safe start; replace with
      * the measured plateau from the max-speed test, and keep PathPlanner's maxDriveSpeed in sync.
      */
-    public static final double kMaxChassisSpeedMps = 4.3;
+    public static final double kMaxChassisSpeedMps = 12;
 
     public static final double kMaxAngularSpeedDps = 540.0;
 
     // Acceleration limits for driver control. Starting points; tune with the driver by raising
     // until wheels slip, the battery browns out, the robot rocks, or the driver is happy.
     /** Speed-up limit, m/s². */
-    public static final double kMaxLinearAccel = 6.0;
+    public static final double kMaxLinearAccel = 10.0;
     /** Slow-down limit, m/s². Keep at or above kMaxLinearAccel so the robot can always stop. */
-    public static final double kMaxLinearDecel = 8.0;
+    public static final double kMaxLinearDecel = 20.0;
     /** Rotation rate change limit, rad/s². */
     public static final double kMaxAngularAccel = 25.0;
     /** Gentler speed-up limit while carrying a fragile game piece (hold right bumper), m/s². */
