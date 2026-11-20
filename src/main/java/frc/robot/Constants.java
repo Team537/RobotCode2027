@@ -48,13 +48,23 @@ public final class Constants {
     // Acceleration limits for driver control. Starting points; tune with the driver by raising
     // until wheels slip, the battery browns out, the robot rocks, or the driver is happy.
     /** Speed-up limit, m/s². */
-    public static final double kMaxLinearAccel = 6.0;
+    public static final double kMaxLinearAccel = 18.0;
     /** Slow-down limit, m/s². Keep at or above kMaxLinearAccel so the robot can always stop. */
-    public static final double kMaxLinearDecel = 8.0;
+    public static final double kMaxLinearDecel = 18.0;
     /** Rotation rate change limit, rad/s². */
-    public static final double kMaxAngularAccel = 25.0;
+    public static final double kMaxAngularAccel = 30.0;
     /** Gentler speed-up limit while carrying a fragile game piece (hold right bumper), m/s². */
-    public static final double kFragileLinearAccel = 1.5;
+    public static final double kFragileLinearAccel = 3;
+
+    /**
+     * Mirrors the gyro heading used to turn field-relative driver speeds into robot-relative ones.
+     * If forward/strafe come out reversed when the robot is turned 90 degrees (fine at 0 and 180),
+     * the heading used for that conversion has the wrong sign: flip this.
+     */
+    public static final boolean kInvertFieldRelativeHeading = true;
+
+    /** Reverses which alliance gets the flipped "forward" direction. Set false to undo. */
+    public static final boolean kSwapAllianceDirection = true;
 
     /** Module speed below which a wheel holds its current angle rather than steering, m/s. */
     public static final double kModuleMinSpeedMps = 0.05;

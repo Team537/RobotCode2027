@@ -40,7 +40,7 @@ public class RobotContainer {
           .createInputStream(
               () -> -m_driverController.getLeftY(),
               () -> -m_driverController.getLeftX(),
-              () -> -m_driverController.getRightX())
+              () -> m_driverController.getRightX())
           .withDeadband(OperatorConstants.kDriveDeadband)
           // Cubing makes the first half of stick travel gentle while keeping full speed at full
           // stick. Speed scaling is done in driverSpeeds(), not with the stream's scale methods,

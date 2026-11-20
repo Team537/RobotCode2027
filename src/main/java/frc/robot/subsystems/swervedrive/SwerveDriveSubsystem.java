@@ -60,12 +60,12 @@ public class SwerveDriveSubsystem extends SubsystemBase {
         new SwerveDriveConfig()
             .withSubsystem(this)
             .withStartingPose(new Pose2d(3, 3, Rotation2d.kZero))
-            .withTranslationController(new PIDController(4, 0, 0))
+            .withTranslationController(new PIDController(600, 0, 0))
             .withRotationController(new PIDController(1, 0, 0))
             .withMaximumModuleSpeed(MetersPerSecond.of(DriveConstants.kMaxModuleSpeedMps))
             .withMaximumChassisSpeed(
                 MetersPerSecond.of(DriveConstants.kMaxChassisSpeedMps),
-                DegreesPerSecond.of(DriveConstants.kMaxAngularSpeedDps))
+                  DegreesPerSecond.of(DriveConstants.kMaxAngularSpeedDps))
             // Stops the sideways drift when translating and rotating at the same time.
             .withDiscretizationTime(Seconds.of(0.02))
             .withTelemetry("swerve", new SwerveDriveTelemetryConfig(TelemetryVerbosity.HIGH));
@@ -171,15 +171,38 @@ public class SwerveDriveSubsystem extends SubsystemBase {
 
     return runOnce(
             () -> {
-              limiter.reset(m_drive.getFieldRelativeSpeed());
+              limiter.reset(
+                  ChassisSpeeds.fromRobotRelativeSpeeds(
+                      m_drive.getRobotRelativeSpeed(), getFieldConversionHeading()));
               m_headingHold.reset();
             })
         .andThen(
             run(
                 () ->
-                    m_drive.setFieldRelativeChassisSpeeds(
-                        m_headingHold.calculate(limiter.calculate(speeds.get())))))
+                    m_drive.setRobotRelativeChassisSpeeds(
+                        ChassisSpeeds.fromFieldRelativeSpeeds(
+                            m_headingHold.calculate(limiter.calculate(speeds.get())),
+                            getFieldConversionHeading()))))
         .withName("Drive");
+  }
+
+  /**
+   * Heading used to convert between field-relative and robot-relative speeds for driver control.
+   * YAMS's own field-relative call always uses the raw gyro angle; doing the conversion here lets
+   * {@link DriveConstants#kInvertFieldRelativeHeading} correct a mirrored heading without touching
+   * the gyro config or the rotation (heading hold, odometry) that depend on it.
+   */
+  private Rotation2d getFieldConversionHeading() {
+    Rotation2d heading = new Rotation2d(m_drive.getGyroAngle());
+    if (DriveConstants.kInvertFieldRelativeHeading) {
+      heading = heading.unaryMinus();
+    }
+    // The input stream already flips forward for the Red alliance. Turning the heading half a
+    // turn reverses that: Blue now flips and Red doesn't. Remove if the alliances are right.
+    if (DriveConstants.kSwapAllianceDirection) {
+      heading = heading.plus(Rotation2d.k180deg);
+    }
+    return heading;
   }
 
   /**
